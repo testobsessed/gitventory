@@ -2,6 +2,8 @@ require 'sinatra'
 require 'net/https'
 require 'open-uri'
 require 'github_api'
+require 'json'
+
 
 # note that the secret key for this app is set as an environment variable
 # if the app stops working, double check that SECRET_KEY is set and is
@@ -19,11 +21,18 @@ get '/login' do
 end
 
 get '/limit' do
-  "#{github.ratelimit}"
+  url_limit = open("https://api.github.com/rate_limit", :ssl_verify_mode => OpenSSL::SSL::VERIFY_NONE).readline #JSON.parse(open("https://api.github.com/rate_limit").read)
+  "With the github object #{github.ratelimit_remaining}, with Github #{Github.ratelimit_remaining} and just from the URL #{url_limit}"
 end
 
 get '/say' do
   "It said #{params[:response]}"
+end
+
+get '/inventory/:account' do
+  account = params[:account]
+  repos = Github.repos.list(:user => account, :per_page => 100)
+  "#{account} has #{repos.count} repos: #{repos.map { |repo| repo["name"] }.to_s}"
 end
 
 get '/' do
