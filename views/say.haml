@@ -1,0 +1,12 @@
+
+=@message
+%table{:id => "inventory", :class => "tablesorter"}
+  %thead
+    %tr
+      %th
+        Fav Things
+  %tbody
+    -@things.each do |thing|
+      %tr 
+        %td
+          =thing

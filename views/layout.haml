@@ -1,0 +1,15 @@
+%html
+  %head
+    %title 
+      ="seeking #{asset('jquery-1.8.3.min.js')}"
+    %link(rel="stylesheet" type="text/css" href="/style.css")
+    %script(src="#{asset('jquery-1.8.3.min.js')}")
+    %script(src="#{asset('jquery.tablesorter.min.js')}")
+    %script(type="text/javascript")
+      $(document).ready(function() { $("#inventory").tablesorter(); }) 
+
+  %body
+    #banner
+      ="Gitventory &mdash; #{@page_title}"
+    #content
+      =yield

@@ -1,0 +1,15 @@
+="#{@account} has #{@repos.count} repos"
+%table{:id => "inventory", :class => "tablesorter"}
+  %thead
+    %tr
+      %th
+        Repo Name
+      %th
+        Last Checkin
+  %tbody
+    -@repos.each do |repo|
+      %tr 
+        %td
+          =repo["name"]
+        %td
+          =DateTime.parse(repo["pushed_at"]).strftime("%m/%d/%Y (%T)")
