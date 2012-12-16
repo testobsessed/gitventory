@@ -5,4 +5,6 @@ gem 'haml'
 
 group :development do
   gem 'shotgun'
+  gem 'vmc'
+  gem 'cfoundry'
 end
