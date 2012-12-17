@@ -3,6 +3,11 @@
   color: purple;
 }
 
+.myfoo {
+  padding: 10px;
+  border: 1px solid blue;
+}
+
 /* tables */
 table.tablesorter {
 	font-family:arial;

@@ -1,7 +1,7 @@
 ---
 applications:
 - name: gitventory
-  framework: sinatra
+  framework: rack
   runtime: ruby19
   memory: 128M
   instances: 1

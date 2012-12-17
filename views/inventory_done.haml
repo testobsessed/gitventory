@@ -1,0 +1,17 @@
+="#{@account} has #{@repo_count} repos"
+-puts "In DONE TEMPLATE"
+%table{:id => "inventory", :class => "tablesorter"}
+  %thead
+    %tr
+      %th
+        Repo Name
+      %th
+        Branch Name
+      %th
+        Last Checkin
+  %tbody
+    -@records.each do |repo_name, branch_name, commit_date|
+      -@repo_name = repo_name
+      -@branch_name = branch_name
+      -@commit_date = commit_date
+      =partial(:branch_partial)
