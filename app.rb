@@ -1,5 +1,6 @@
 require 'sinatra'
-require 'net/https'
+# require 'net/https'
+require 'httparty'
 require 'open-uri'
 require 'github_api'
 require 'json'
@@ -8,6 +9,7 @@ require 'date'
 require 'sinatra/async'
 require 'thin'
 require 'sinatra/partial'
+#require 'em-http'
 
 Dir["helpers/*.rb"].each {|file| require file }
 
@@ -44,13 +46,6 @@ class GitventoryApp < Sinatra::Base
     include ViewHelpers
   end
   
-  get '/hi' do
-    @page_title = "Howdy!"
-    @message = "Hello World! Your secret is #{settings.secret_key}"
-    haml :hi
-    #puts headers
-  end
-
   get '/login' do
     redirect @github.authorize_url
   end
@@ -65,43 +60,84 @@ class GitventoryApp < Sinatra::Base
     @message = "The secret message is: #{params}"
     haml :say
   end
+  
+  aget '/repos/:account' do
+    account = params[:account]
+    listurl = "https://api.github.com/users/#{account}/repos"
+    
+    records = []
+    
+    # myout = MyStream.new
+    # body myout
+    # myout.stream(haml :inventory)
+    # myout.succeed
+    out = MyStream.new
+    body out
+    out.stream erb(:inventory_head)
+    # out.stream('<table id="inventory" class="tablesorter">')
+    # out.stream('<thead><tr><th class="header"> Repo Name </th><th class="header"> Branch Name </th><th class="header"> Last Checkin </th></tr></thead>')
+    # out.stream('<tbody>')
+    out.callback { out.stream erb(:inventory_foot) }
+    all_repos = HTTParty::get(listurl)
+    puts "Done with get. All repos has #{all_repos.count} records."
+    EM.next_tick do
+      timer = EM.add_periodic_timer(0.3) do
+        repo_counter = 0
+        all_repos.each do |repo|
+          repo_counter += 1
+          puts "Working on repo #{repo_counter} of #{all_repos.count}"
+          repo = {
+            :repo_name => repo["name"],
+            :branch_name => "n/a",
+            :commit_date => "n/a"
+          }
+          show_item(repo, out)
+          # records.push([repo_name, branch_name, commit_date])
+          if (repo_counter == all_repos.count)
+            puts "!!!!!!!!!!DONE WITH REPOS"
+            timer.cancel
+            out.succeed
+          end
+        end
+      end
+    end
+  end
 
   aget '/inventory/:account' do
-    @records = []
-    @account = params[:account]
-    @page_title = "Repos for #{@account}"
-    myout = MyStream.new
-    body myout
-    myout.stream(haml :inventory)
-    myout.succeed
+    account = params[:account]
+    @page_title = "Repos for #{account}"
+    list_repos_url = "https://api.github.com/users/#{account}/repos"
+    
     out = MyStream.new
-    out.callback { show_inventory(@records, out) }
-    all_repos = Github.repos.list(:user => @account, :per_page => 100)
-    @repo_count = all_repos.count
-    out.stream "Gathering Data. Please be patient."
-    # @out.stream('<table id="inventory" class="tablesorter">')
-    # @out.stream('<thead><tr><th class="header"> Repo Name </th><th class="header"> Branch Name </th><th class="header"> Last Checkin </th></tr></thead>')
-    # @out.stream('<tbody>')
+    body out
+    out.stream erb(:inventory_head)
+    
+    out.callback { out.stream erb(:inventory_foot) }
+    all_repos = HTTParty::get(list_repos_url)
+    
     repo_counter = 0
     all_repos.each do |repo|
       EM.next_tick do
-        puts "!!!!!At top of tick loop with current repo count #{repo_counter} and total #{all_repos.count}"
+        repo_name = repo["name"]
+        list_branches_url = "https://api.github.com/repos/#{account}/#{repo_name}/branches"
+
         branch_counter = 0
-        all_branches = Github::Repos.new(:repo => repo["name"], :user => @account).branches(@account, repo["name"])
+        all_branches = HTTParty::get(list_branches_url)
         all_branches.each do |branch|
           #puts "!!!!!At top of branch loop with current repo count #{repo_counter} and total #{all_repos.count}"
           timer = EM.add_periodic_timer(0.3) do
             out.cancel_timeout
-            puts "Working on #{branch.name}"
-            @repo_name = repo["name"]
-            @branch_name = branch.name
-            @commit_date = DateTime.parse(github.repos.commits.get(@account, repo["name"], branch.commit.sha).commit.committer["date"]).strftime("%m/%d/%Y (%T)")
+            puts "Working on #{branch['name']}"
+            inventory_item = {
+              :repo_name => repo["name"],
+              :branch_name => branch["name"],
+              :commit_date => "n/a"
+            }
+            show_item(inventory_item, out)
+            # @commit_date = DateTime.parse(github.repos.commits.get(@account, repo["name"], branch.commit.sha).commit.committer["date"]).strftime("%m/%d/%Y (%T)")
             # puts "!!!!!!!!!!!!!  STREAM: #{@repo_name}, #{@branch_name}, #{@commit_date}"
-            @records.push([@repo_name, @branch_name, @commit_date])
-            out.stream "."
             branch_counter += 1
             if (branch_counter == all_branches.count)
-              puts "!!!!!!!!!!!!DONE WITH BRANCHES FOR #{repo["name"]}. Currently have #{@records.count} records."
               repo_counter += 1
               timer.cancel
             end
@@ -131,6 +167,13 @@ class GitventoryApp < Sinatra::Base
     #haml :inventory
         
   end
+  
+  def show_item(thing, out)
+    puts "Showing #{thing.to_s}"
+    @thing = thing
+    out.stream erb(:item)
+  end
+  
   def show_inventory(records, out)
     puts "IN SHOW INVENTORY WITH #{records.count} records"
     #redirect to('/display')

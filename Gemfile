@@ -6,6 +6,8 @@ gem 'github_api'
 gem 'async_sinatra'
 gem 'thin'
 gem 'sinatra-partial'
+gem 'httparty'
+# gem 'em-http-request'
 
 group :development do
   gem 'shotgun'
